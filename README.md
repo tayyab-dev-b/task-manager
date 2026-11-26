@@ -60,6 +60,9 @@ Routes → Middleware → Controllers → Services → Database
 task-manager/
 ├── server.js                  # Entry point: loads env, connects DB, starts HTTP server
 ├── render.yaml                # Render (free tier) deployment blueprint
+├── vercel.json                # Vercel rewrites: /api/* and /health → serverless function
+├── api/
+│   └── index.js               # Vercel serverless entry: exports the Express app (no listener)
 ├── .env.example               # Environment variable template
 ├── public/                    # Web UI (single-page app, served at /)
 │   ├── index.html             # Auth screens + task board + task modal
@@ -190,6 +193,14 @@ This repo includes a `render.yaml` blueprint for Render's free tier:
 1. Push the repo to GitHub and create a new **Blueprint** (or Web Service) on Render.
 2. Set `MONGO_URI` (e.g. a MongoDB Atlas connection string) in the Render dashboard — `JWT_SECRET` is generated automatically by the blueprint.
 3. Render builds with `npm install` and starts with `npm start`; `/health` is the health-check path.
+
+### Deploy on Vercel
+
+The repo also runs on Vercel as a serverless deployment — the Express app is exported by `api/index.js` (no listener), `vercel.json` rewrites `/api/*` and `/health` to that function, and Vercel serves the `public/` UI as static files:
+
+1. Import the repo in the Vercel dashboard (framework preset: **Other**) — no build command is needed; Vercel just installs the dependencies from `package.json`.
+2. Set the `MONGO_URI` and `JWT_SECRET` environment variables in the Vercel project settings.
+3. Deploy — the board loads at `/` and the API answers under `/api/*`, exactly as locally.
 
 ---
 
