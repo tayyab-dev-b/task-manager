@@ -16,7 +16,21 @@ A production-style **Task Manager REST API** built with **Node.js, Express.js, M
 - ✅ **Validation** — request bodies validated with **Zod** before they reach the controllers
 - 🧯 **Central error handling** — one error middleware, consistent `{ success, message }` JSON everywhere
 - ❤️ **Health check** — `GET /health` reports API + database status
-- 🏠 **Landing page** — a small EJS page at `/` listing the live endpoints
+- 🖥️ **Web UI** — a full single-page task board served at `/` (see below), built with vanilla HTML/CSS/JS on this same API
+
+---
+
+## 🖥️ Web UI
+
+Opening `/` serves a complete single-page app from the `public/` folder — no build step and no extra dependencies, just vanilla HTML, CSS and JavaScript talking to this API with `fetch`.
+
+- **Login & register** screens; the JWT is kept in `localStorage` and sent as `Authorization: Bearer <token>` on every API call
+- **Task board** with three columns — To Do / In Progress / Done — task cards with priority badges and due dates (overdue ones are highlighted)
+- **Create & edit** tasks in a modal form, move them between columns from the card, and delete with a confirmation
+- **Search, priority filter and "load more"** pagination, wired to the list endpoint's `search` / `priority` / `page` / `limit` parameters
+- **Stats strip** with per-status counts, friendly empty states, and an automatic return to the login screen when the session expires (HTTP 401)
+
+The UI and the REST API share one server and one auth system — anything you can do in the browser, you can do with the endpoints below.
 
 ---
 
@@ -29,7 +43,7 @@ A production-style **Task Manager REST API** built with **Node.js, Express.js, M
 | Database | MongoDB with Mongoose ODM           |
 | Auth     | bcryptjs + JSON Web Tokens (JWT)    |
 | Validation | Zod                               |
-| Views    | EJS (landing page only)             |
+| Views    | Vanilla HTML/CSS/JS single-page app (`public/`) |
 | Logging  | Morgan (development)                |
 
 ---
@@ -47,8 +61,12 @@ task-manager/
 ├── server.js                  # Entry point: loads env, connects DB, starts HTTP server
 ├── render.yaml                # Render (free tier) deployment blueprint
 ├── .env.example               # Environment variable template
+├── public/                    # Web UI (single-page app, served at /)
+│   ├── index.html             # Auth screens + task board + task modal
+│   ├── style.css              # Light theme with emerald accent, responsive
+│   └── app.js                 # fetch + JWT client logic for the whole UI
 └── src/
-    ├── app.js                 # Express app wiring (middleware, views, routes, errors)
+    ├── app.js                 # Express app wiring (middleware, static UI, routes, errors)
     ├── config/
     │   └── db.js              # MongoDB connection (fails soft — server stays up)
     ├── models/
@@ -69,11 +87,9 @@ task-manager/
     ├── routes/
     │   ├── authRoutes.js      # /api/auth/*
     │   └── taskRoutes.js      # /api/tasks/*
-    ├── utils/
-    │   ├── AppError.js        # Error class carrying an HTTP status code
-    │   └── asyncHandler.js    # Async controller wrapper
-    └── views/
-        └── index.ejs          # Landing page
+    └── utils/
+        ├── AppError.js        # Error class carrying an HTTP status code
+        └── asyncHandler.js    # Async controller wrapper
 ```
 
 ---
@@ -106,7 +122,7 @@ npm run dev    # development (nodemon)
 npm start      # production
 ```
 
-Open http://localhost:5000 for the landing page and http://localhost:5000/health for the health check.
+Open http://localhost:5000 for the web UI (register an account and start adding tasks) and http://localhost:5000/health for the health check.
 
 > If MongoDB is unreachable the server still starts — `/health` reports `database: "disconnected"` and DB-backed routes return errors until the connection is restored.
 

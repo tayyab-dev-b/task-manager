@@ -10,9 +10,8 @@ const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
-// ---- View engine (minimal EJS landing page) ----
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+// ---- Static web UI (single-page app served from /public) ----
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 // ---- Global middleware ----
 app.use(cors());
@@ -21,13 +20,6 @@ app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
-
-// ---- Landing page ----
-app.get("/", (req, res) => {
-  res.render("index", {
-    dbState: mongoose.connection.readyState === 1 ? "connected" : "not connected",
-  });
-});
 
 // ---- Health check ----
 app.get("/health", (req, res) => {

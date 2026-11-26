@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <meta name="description" content="Task Manager — a simple board for your tasks, powered by a Node.js + Express + MongoDB API with JWT auth.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- ============ AUTH VIEW ============ -->
+  <main id="authView" class="auth-wrap hidden">
+    <div class="auth-card">
+      <div class="brand brand-center">
+        <span class="brand-mark">✓</span>
+        <span class="brand-name">Task Manager</span>
+      </div>
+      <p class="auth-sub">Organize your work, one task at a time.<br>Log in or create an account to open your board.</p>
+
+      <div class="tabs" role="tablist">
+        <button type="button" id="tabLogin" class="tab active">Login</button>
+        <button type="button" id="tabRegister" class="tab">Register</button>
+      </div>
+
+      <div id="authError" class="alert alert-error hidden"></div>
+      <div id="authInfo" class="alert alert-info hidden"></div>
+
+      <form id="loginForm" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password" required>
+        </label>
+        <button type="submit" id="loginBtn" class="btn btn-primary btn-block">Login</button>
+        <p class="auth-switch">New here? <a href="#" id="goRegister">Create an account</a></p>
+      </form>
+
+      <form id="registerForm" class="hidden" novalidate>
+        <label class="field">
+          <span>Username</span>
+          <input type="text" id="regUsername" placeholder="e.g. tayyab" autocomplete="username" maxlength="30" required>
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="regPassword" placeholder="At least 6 characters" autocomplete="new-password" required>
+        </label>
+        <button type="submit" id="registerBtn" class="btn btn-primary btn-block">Create account</button>
+        <p class="auth-switch">Already registered? <a href="#" id="goLogin">Log in</a></p>
+      </form>
+    </div>
+    <p class="auth-foot">Built by Muhammad Tayyab — Node.js · Express · MongoDB · JWT</p>
+  </main>
+
+  <!-- ============ APP VIEW ============ -->
+  <div id="appView" class="hidden">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-mark">✓</span>
+          <span class="brand-name">Task Manager</span>
+        </div>
+        <div class="user-box">
+          <div class="user-meta">
+            <span id="userName" class="user-name"></span>
+            <span id="userEmail" class="user-email"></span>
+          </div>
+          <button type="button" id="logoutBtn" class="btn btn-ghost">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Stats strip (counts from the tasks currently loaded) -->
+      <section class="stats" aria-label="Task statistics">
+        <div class="stat"><span class="stat-num" id="statTotal">0</span><span class="stat-label">Loaded</span></div>
+        <div class="stat"><span class="stat-num" id="statTodo">0</span><span class="stat-label">To Do</span></div>
+        <div class="stat"><span class="stat-num" id="statInProgress">0</span><span class="stat-label">In Progress</span></div>
+        <div class="stat"><span class="stat-num" id="statDone">0</span><span class="stat-label">Done</span></div>
+        <div class="stat"><span class="stat-num stat-overdue" id="statOverdue">0</span><span class="stat-label">Overdue</span></div>
+      </section>
+
+      <!-- Toolbar -->
+      <section class="toolbar">
+        <input type="search" id="searchInput" class="search" placeholder="Search tasks by title…" aria-label="Search tasks">
+        <select id="priorityFilter" class="select" aria-label="Filter by priority">
+          <option value="">All priorities</option>
+          <option value="high">High priority</option>
+          <option value="medium">Medium priority</option>
+          <option value="low">Low priority</option>
+        </select>
+        <button type="button" id="newTaskBtn" class="btn btn-primary">+ New Task</button>
+      </section>
+
+      <div id="boardError" class="alert alert-error hidden"></div>
+      <div id="boardLoading" class="board-loading hidden"><span class="spinner"></span> Loading tasks…</div>
+
+      <!-- Board -->
+      <section id="board" class="board">
+        <div class="column">
+          <h3 class="col-head"><span class="dot dot-todo"></span>To Do <span class="col-count" id="count-todo">0</span></h3>
+          <div class="cards" id="col-todo"></div>
+          <p class="col-empty" id="empty-todo">No tasks here yet.</p>
+        </div>
+        <div class="column">
+          <h3 class="col-head"><span class="dot dot-progress"></span>In Progress <span class="col-count" id="count-in-progress">0</span></h3>
+          <div class="cards" id="col-in-progress"></div>
+          <p class="col-empty" id="empty-in-progress">No tasks here yet.</p>
+        </div>
+        <div class="column">
+          <h3 class="col-head"><span class="dot dot-done"></span>Done <span class="col-count" id="count-done">0</span></h3>
+          <div class="cards" id="col-done"></div>
+          <p class="col-empty" id="empty-done">No tasks here yet.</p>
+        </div>
+      </section>
+
+      <!-- Board-level empty state -->
+      <div id="boardEmpty" class="empty-state hidden">
+        <div class="empty-icon">🗂️</div>
+        <h3 id="boardEmptyTitle">No tasks yet</h3>
+        <p id="boardEmptyText">Create your first task and it will appear on this board.</p>
+        <button type="button" id="emptyCreateBtn" class="btn btn-primary">+ Create a task</button>
+      </div>
+
+      <div class="load-more-row">
+        <span id="showingText" class="showing"></span>
+        <button type="button" id="loadMoreBtn" class="btn btn-secondary hidden">Load more</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ TASK MODAL ============ -->
+  <div id="taskModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="modalTitle">New Task</h2>
+        <button type="button" id="modalClose" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <div id="modalError" class="alert alert-error hidden"></div>
+      <form id="taskForm" novalidate>
+        <input type="hidden" id="taskId">
+        <label class="field">
+          <span>Title *</span>
+          <input type="text" id="fTitle" placeholder="e.g. Finish portfolio" maxlength="120" required>
+        </label>
+        <label class="field">
+          <span>Description</span>
+          <textarea id="fDescription" rows="3" maxlength="1000" placeholder="What needs to be done?"></textarea>
+        </label>
+        <div class="form-row">
+          <label class="field">
+            <span>Status</span>
+            <select id="fStatus">
+              <option value="todo">To Do</option>
+              <option value="in-progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Priority</span>
+            <select id="fPriority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span>Due date</span>
+          <input type="date" id="fDueDate">
+        </label>
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" id="saveTaskBtn" class="btn btn-primary">Save task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
