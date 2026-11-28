@@ -16,7 +16,10 @@ async function connectDB() {
 
   try {
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      // Serverless cold starts plus a free-tier Atlas cluster can be
+      // slow to select a server; 5s was too tight and caused false
+      // "disconnected" results in production, so allow up to 30s.
+      serverSelectionTimeoutMS: 30000,
     });
     console.log(`MongoDB connected: ${conn.connection.host}`);
   } catch (error) {

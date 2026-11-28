@@ -8,6 +8,7 @@
 // only ever handles API requests.
 require("dotenv").config();
 
+const mongoose = require("mongoose");
 const app = require("../src/app");
 const connectDB = require("../src/config/db");
 
@@ -18,4 +19,28 @@ const connectDB = require("../src/config/db");
 // reuse the already-loaded module (and its Mongoose connection).
 connectDB();
 
-module.exports = app;
+// Serverless functions can be frozen between invocations, which can
+// interrupt the fire-and-forget connection above. Before handing a
+// request to the app, make sure a connection attempt has completed:
+// if Mongoose is not connected, await one (shared) attempt first.
+// The attempt is fail-soft and time-bounded by the driver's own
+// serverSelectionTimeoutMS, so a down database delays the request
+// but never crashes the function.
+let pendingConnection = null;
+
+function ensureConnection() {
+  if (mongoose.connection.readyState === 1) {
+    return Promise.resolve();
+  }
+  if (!pendingConnection) {
+    pendingConnection = connectDB().finally(() => {
+      pendingConnection = null;
+    });
+  }
+  return pendingConnection;
+}
+
+module.exports = async (req, res) => {
+  await ensureConnection();
+  return app(req, res);
+};
